@@ -1,4 +1,4 @@
-sources/  # this is the dir where I store original repo and other important for context sources
+sources/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
