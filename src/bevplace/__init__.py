@@ -4,6 +4,9 @@ import pathlib
 import re
 
 from .preprocess.bev import bev_density_image_torch  # noqa: F401
+from .models.rem import REM  # noqa: F401
+from .models.netvlad import NetVLAD  # noqa: F401
+from .models.rein import REIN  # noqa: F401
 
 
 def _get_version():

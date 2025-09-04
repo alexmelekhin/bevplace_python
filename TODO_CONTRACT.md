@@ -78,7 +78,7 @@
 
 ### Deliverables — TODOs
 - [x] Implement torch-based BEV density image with CUDA support and fixed D,g.
-- [ ] Port REM/NetVLAD/REIN from `mmpr_bevplace`; device-agnostic, typed.
+- [x] Port REM/NetVLAD/REIN from `mmpr_bevplace`; device-agnostic, typed.
 - [ ] Build retrieval index (PCA-512 + FAISS); save/load; add/search APIs.
 - [ ] Implement keypoints, descriptor sampling, matching with thresholds.
 - [ ] Implement 2D rigid RANSAC with reports and parameters.
