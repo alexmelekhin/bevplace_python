@@ -25,6 +25,8 @@ build-backend = "hatchling.build"
 dev = [
     "pytest>=8.4.1",
     "ruff>=0.12.11",
+    "torch==2.5.1",
+    "torchvision==0.20.1",
 ]
 
 [tool.uv.sources]

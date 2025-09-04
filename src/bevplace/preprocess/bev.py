@@ -33,12 +33,14 @@ def _compute_grid_indices(
         return pts.new_empty((0,), dtype=torch.long), pts.new_empty((0,), dtype=torch.long), 0, 0
 
     # Axis convention:
-    # row = floor(( D - x) / g) in [0, H-1], col = floor(( y + D) / g) in [0, W-1]
-    rows = torch.floor((D - pts[:, 0]) / g).to(dtype=torch.long)
-    cols = torch.floor((pts[:, 1] + D) / g).to(dtype=torch.long)
+    # row = floor(( D - x) / g), col = floor(( y + D) / g)
+    # Include boundary points by clamping to [0, H-1] and [0, W-1].
+    rows_raw = torch.floor((D - pts[:, 0]) / g).to(dtype=torch.long)
+    cols_raw = torch.floor((pts[:, 1] + D) / g).to(dtype=torch.long)
 
-    valid = (rows >= 0) & (rows < H) & (cols >= 0) & (cols < W)
-    return rows[valid], cols[valid], H, W
+    rows = torch.clamp(rows_raw, 0, H - 1)
+    cols = torch.clamp(cols_raw, 0, W - 1)
+    return rows, cols, H, W
 
 
 def bev_density_image_torch(points: torch.Tensor, params: BEVParams) -> torch.Tensor:
@@ -54,12 +56,21 @@ def bev_density_image_torch(points: torch.Tensor, params: BEVParams) -> torch.Te
         raise ValueError("points must be [N,3] or [N,>=2]")
 
     device = points.device
-    dtype = points.dtype
-    pts_xy = points[:, :2]
-
-    rows, cols, H, W = _compute_grid_indices(pts_xy, params)
-    if H == 0 or rows.numel() == 0:
+    # Determine output grid regardless of valid points
+    H = W = int(round(2 * params.D / params.g))
+    if H <= 0:
         return torch.zeros((1, 0, 0), device=device, dtype=torch.float32)
+
+    # Optional z-filtering per contract
+    if points.shape[1] >= 3:
+        zmask = points[:, 2].abs() <= params.D
+        pts_xy = points[zmask, :2]
+    else:
+        pts_xy = points[:, :2]
+
+    rows, cols, _, _ = _compute_grid_indices(pts_xy, params)
+    if rows.numel() == 0:
+        return torch.zeros((1, H, W), device=device, dtype=torch.float32)
 
     # Flat binning: idx = row*W + col
     flat_idx = rows * W + cols

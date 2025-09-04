@@ -34,6 +34,8 @@ torch = [
 dev = [
     { name = "pytest" },
     { name = "ruff" },
+    { name = "torch" },
+    { name = "torchvision" },
 ]
 
 [package.metadata]
@@ -48,6 +50,8 @@ provides-extras = ["torch"]
 dev = [
     { name = "pytest", specifier = ">=8.4.1" },
     { name = "ruff", specifier = ">=0.12.11" },
+    { name = "torch", specifier = "==2.5.1", index = "https://download.pytorch.org/whl/cu121" },
+    { name = "torchvision", specifier = "==0.20.1", index = "https://download.pytorch.org/whl/cu121" },
 ]
 
 [[package]]
