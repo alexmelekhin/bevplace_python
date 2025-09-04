@@ -1,5 +1,10 @@
+"""BEVPlace++ inference package (work in progress)."""
+
 import pathlib
 import re
+
+from .preprocess.bev import bev_density_image_torch  # noqa: F401
+
 
 def _get_version():
     pyproject_path = pathlib.Path(__file__).parent.parent.parent / "pyproject.toml"
@@ -14,5 +19,6 @@ def _get_version():
     except Exception:
         pass
     return "0.0.0"
+
 
 __version__ = _get_version()
