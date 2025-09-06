@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import time
 from dataclasses import dataclass
-from typing import Callable, Optional, Tuple
+from typing import Callable, Optional, Tuple, Union
 
 import numpy as np
 import torch
@@ -14,7 +14,7 @@ from bevplace.pose.sampling import sample_descriptors
 from bevplace.preprocess.bev import bev_density_image_torch
 from bevplace.retrieval import BEVIndex
 
-ReferenceProvider = Callable[[int], Tuple[torch.Tensor, torch.Tensor]]
+ReferenceProvider = Callable[[int], Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]]
 
 
 @dataclass
@@ -79,7 +79,11 @@ class BEVLocalizer:
         T_rel = np.eye(3, dtype=np.float32)
         if self.reference_provider is not None:
             t3 = time.perf_counter()
-            bev_m, rem_map_m = self.reference_provider(matched_id)
+            ret = self.reference_provider(matched_id)
+            if isinstance(ret, tuple):
+                _, rem_map_m = ret
+            else:
+                rem_map_m = ret
             # Simple keypoint grid for demo matching
             H, W = bev_img.shape[-2], bev_img.shape[-1]
             step = max(4, int(round(self.params.g / 0.2)))

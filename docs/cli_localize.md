@@ -40,6 +40,7 @@ bevplace localize \
 - Exactly one of `--pcd` or `--bin` must be provided.
 - `--db` points to an index directory created by `bevplace index build`.
 - `--map-dir` is required only when `--estimate-pose` is used so we can load the matched reference cloud identified in `items.jsonl`.
+  - If the index was built with `--store-locals`, `--map-dir` is not required: the tool will load stored REM locals from the index directory.
 
 ## Options
 
@@ -83,6 +84,7 @@ Notes:
 ## Behavior and notes
 
 - If `--estimate-pose` is set, the tool reads the matched item’s relative path from `items.jsonl` in the DB and loads that cloud from `--map-dir` to compute REM features for matching.
+  - If the index contains stored locals (`db/locals/{id}.npz`), they are used directly and the map directory is not needed.
 - If `--estimate-pose` is not set, the command performs retrieval only.
 - `--D` and `--g` should match the parameters used to build the index to avoid descriptor distribution shift.
 - Progress: a small progress message is printed; use `--quiet` to suppress.

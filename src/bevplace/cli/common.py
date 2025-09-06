@@ -58,3 +58,13 @@ def read_bev_params(db_dir: Path, fallback: BEVParams) -> BEVParams:
         return fallback
     data = json.loads(p.read_text(encoding="utf-8"))
     return BEVParams(D=float(data.get("D", fallback.D)), g=float(data.get("g", fallback.g)))
+
+
+def read_locals(db_dir: Path, match_id: int) -> np.ndarray:
+    """Read stored local REM features for item id. Returns float32 [C,H,W]."""
+    npz = db_dir / "locals" / f"{match_id:06d}.npz"
+    if not npz.exists():
+        raise FileNotFoundError(str(npz))
+    data = np.load(npz)
+    arr = data["data"].astype(np.float32, copy=False)
+    return arr

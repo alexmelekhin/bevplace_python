@@ -12,7 +12,13 @@ from bevplace.core.types import BEVParams
 from bevplace.pipeline.localizer import BEVLocalizer
 from bevplace.preprocess.bev import bev_density_image_torch
 from bevplace.retrieval import BEVIndex
-from bevplace.cli.common import load_bin_kitti, load_pcd_open3d, read_items, read_bev_params
+from bevplace.cli.common import (
+    load_bin_kitti,
+    load_pcd_open3d,
+    read_items,
+    read_bev_params,
+    read_locals,
+)
 
 
 def run_localize(args: argparse.Namespace) -> None:
@@ -58,6 +64,21 @@ def run_localize(args: argparse.Namespace) -> None:
             return bev_m, rem_map_m
 
         ref_provider = provider_fn
+
+    # If stored locals exist, override provider to load them directly
+    if args.estimate_pose:
+        try:
+            _ = (db_dir / "locals").exists()
+            items = read_items(db_dir)
+
+            def provider_locals(match_id: int):
+                rem = read_locals(db_dir, match_id)  # [C,H,W] float32
+                # Convert to torch tensor shaped [1,C,H,W]
+                return torch.from_numpy(rem).unsqueeze(0).to(device)
+
+            ref_provider = provider_locals
+        except Exception:
+            pass
 
     # Localize via orchestrator
     localizer = BEVLocalizer(

@@ -19,6 +19,7 @@ def _add_index_subparser(subparsers: argparse._SubParsersAction) -> None:
     p_build.add_argument("--device", default=None, help="cpu or cuda (default: auto)")
     p_build.add_argument("--D", type=float, default=40.0, help="BEV half-size in meters")
     p_build.add_argument("--g", type=float, default=0.4, help="BEV grid size in meters per pixel")
+    p_build.add_argument("--store-locals", action="store_true", help="Store REM local features in index dir")
 
     def run_build(args: argparse.Namespace) -> None:
         import torch
@@ -34,6 +35,7 @@ def _add_index_subparser(subparsers: argparse._SubParsersAction) -> None:
             device=device,
             D=args.D,
             g=args.g,
+            store_locals=args.store_locals,
         )
 
     p_build.set_defaults(func=run_build)

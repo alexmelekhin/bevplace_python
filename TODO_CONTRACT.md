@@ -97,7 +97,7 @@ Planned flags:
 - [x] Implement 2D rigid RANSAC with reports and parameters.
 - [x] Create `BEVLocalizer` orchestrator returning `LocalizationResult` with diagnostics.
 - [x] Add CLI commands: `index` build/localize; optional `serve` (serve deferred).
-- [ ] Store REM local features at index build; load at inference to avoid recompute.
+- [x] Store REM local features at index build; load at inference to avoid recompute.
 - [ ] Introduce Pydantic-based configs and seed control.
 - [ ] Add logging/profiling/visualization utilities.
 - [ ] Weights management: load/convert pre-trained REIN; document format.

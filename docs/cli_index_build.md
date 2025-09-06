@@ -33,6 +33,7 @@ bevplace index build \
   [--device cpu|cuda] \
   [--D 40.0] \
   [--g 0.4] \
+  [--store-locals] \
   [-q|--quiet]
 ```
 
@@ -43,6 +44,7 @@ bevplace index build \
 - **--pca-dim**: PCA target dimension (set to 0 or omit to disable). Default: 512.
 - **--device**: Device for feature extraction. Default: auto (cuda if available).
 - **--D**, **--g**: BEV generation parameters (half-size in meters, grid size in meters).
+- **--store-locals**: Also store per-item REM local feature maps (float32) to speed up pose estimation later.
 - **-q**, **--quiet**: Suppress progress output.
 
 ## Inputs
@@ -93,6 +95,9 @@ The index directory is self-describing and versioned:
     "created_utc": "2025-09-06T12:34:56Z"
   }
   ```
+- If `--store-locals` is set:
+  - `<DB_DIR>/locals/{id}.npz` — per-item REM local feature map stored as float32 array `data` with shape `[C,H,W]`.
+  - This enables pose estimation at inference without access to the original map directory.
 
 IDs are stable and correspond to the sorted order of discovered files.
 
@@ -131,6 +136,7 @@ IDs are stable and correspond to the sorted order of discovered files.
 - If PCA is enabled, PCA is fit on all descriptors (or a future `--pca-sample N` when available), and descriptors are projected before FAISS indexing.
 - Unreadable/empty files are skipped with a warning; the build continues.
 - Deterministic execution: discovery order is sorted; seeds fixed for any sampling.
+- With `--store-locals`, REM local features are written during the main processing pass; no extra pass is needed.
 - Progress: a compact progress bar and minimal status messages are printed. Use `--quiet` to disable all output.
 - Performance tips:
   - Set `--device cuda` to utilize GPU for feature extraction.

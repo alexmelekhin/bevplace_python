@@ -29,6 +29,7 @@ def main() -> None:  # pragma: no cover - thin CLI wrapper
     parser.add_argument("--D", type=float, default=40.0, help="BEV half-size in meters")
     parser.add_argument("--g", type=float, default=0.4, help="BEV grid size in meters per pixel")
     parser.add_argument("-q", "--quiet", action="store_true", help="Suppress progress output")
+    parser.add_argument("--store-locals", action="store_true", help="Store REM local features in index dir")
 
     args = parser.parse_args()
 
@@ -48,6 +49,7 @@ def main() -> None:  # pragma: no cover - thin CLI wrapper
         D=args.D,
         g=args.g,
         quiet=args.quiet,
+        store_locals=args.store_locals,
     )
 
 
@@ -100,6 +102,7 @@ def build_index(
     D: float = 40.0,
     g: float = 0.4,
     quiet: bool = False,
+    store_locals: bool = False,
 ) -> None:
     t0 = time.perf_counter()
     map_path = Path(map_dir)
@@ -128,33 +131,42 @@ def build_index(
         )
 
     total = len(files)
-    for idx, p in enumerate(files, start=1):
-        # Load point cloud
-        if p.suffix.lower() == ".bin":
-            pts = load_bin_kitti(p)
-        elif p.suffix.lower() == ".pcd":
-            pts = load_pcd_open3d(p)
-        else:
-            continue
-        if pts.size == 0:
-            continue
+    locals_dir = out_path / "locals"
+    if store_locals:
+        locals_dir.mkdir(parents=True, exist_ok=True)
 
-        # To tensor -> BEV -> REIN
-        pts_t = torch.from_numpy(pts).to(device)
-        bev = bev_density_image_torch(pts_t, params)
-        with torch.no_grad():
-            _, _, desc = model(bev.unsqueeze(0))
-        descriptors.append(desc.detach().cpu().numpy())
+    with torch.no_grad():
+        for idx, p in enumerate(files, start=1):
+            # Load point cloud
+            if p.suffix.lower() == ".bin":
+                pts = load_bin_kitti(p)
+            elif p.suffix.lower() == ".pcd":
+                pts = load_pcd_open3d(p)
+            else:
+                continue
+            if pts.size == 0:
+                continue
 
-        rel = str(p.relative_to(map_path))
-        pose = poses.get(rel)
-        items.append((rel, pose))
+            # To tensor -> BEV -> REIN
+            pts_t = torch.from_numpy(pts).to(device)
+            bev = bev_density_image_torch(pts_t, params)
+            _, rem_map, desc = model(bev.unsqueeze(0))
+            descriptors.append(desc.detach().cpu().numpy())
 
-        if not quiet:
-            width = 28
-            filled = int(width * idx / total)
-            bar = "#" * filled + "-" * (width - filled)
-            print(f"\r[{bar}] {idx}/{total} {rel[:60]}", end="", flush=True)
+            # Optionally persist locals now to avoid second pass
+            if store_locals:
+                arr = rem_map.detach().cpu().squeeze(0).numpy()  # [C,H,W]
+                np.savez(locals_dir / f"{idx - 1:06d}.npz", data=arr)
+
+            rel = str(p.relative_to(map_path))
+            pose = poses.get(rel)
+            items.append((rel, pose))
+
+            if not quiet:
+                width = 28
+                filled = int(width * idx / total)
+                bar = "#" * filled + "-" * (width - filled)
+                print(f"\r[{bar}] {idx}/{total} {rel[:60]}", end="", flush=True)
 
     if not descriptors:
         raise RuntimeError("No descriptors were extracted; aborting")
@@ -169,6 +181,8 @@ def build_index(
             print("Fitting PCA...", flush=True)
         index.fit_pca(X)
     index.add(X, poses=None)
+
+    # Locals are already stored during the main pass when requested
 
     # Save index
     if not quiet:
