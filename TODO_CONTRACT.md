@@ -64,6 +64,13 @@
 - PCA to 512-D with saved components/mean; FAISS index type configurable (Flat/HNSW/IVF). Versioned artifacts and reproducible save/load.
 - Incremental `add()` and deferred `train()` (when index type requires training).
 
+#### Local feature persistence (proposed optimization)
+- Goal: avoid recomputing REM local feature maps on inference by storing them during indexing.
+- Storage format: per-item `locals/{id:06d}.npz` with `data` (float32 [C,H,W]) — исходный формат без квантования/сжатия.
+- Index metadata additions (`meta.json`): `locals_available: bool`, `locals_format: str`, `locals_shape: [C,H,W]`, `locals_dtype: str`.
+- Inference usage: `BEVLocalizer` checks `locals_available`; if true, loads matched item's REM map from index dir (no `--map-dir` needed). Falls back to current provider if locals absent.
+- Size note (C=128, H=W=200): float32 ≈ 128*200*200*4 ≈ 20.48 MB на кадр.
+
 ### Pose Estimation (contract)
 - FAST keypoints (OpenCV) with configurable threshold; mutual check + ratio test; max matches cap.
 - RANSAC (SE(2)): configurable inlier threshold (pixels or meters via `g`), max iters, confidence; return best transform + report (inliers, residual stats).
@@ -78,6 +85,10 @@
 
 Note: `serve` implementation is deferred for a later iteration.
 
+Planned flags:
+- `bevplace index build`: `--store-locals` (bool, default: off).
+- `bevplace localize`: no changes; automatically uses saved local features if available.
+
 ### Deliverables — TODOs
 - [x] Implement torch-based BEV density image with CUDA support and fixed D,g.
 - [x] Port REM/NetVLAD/REIN from `mmpr_bevplace`; device-agnostic, typed.
@@ -86,6 +97,7 @@ Note: `serve` implementation is deferred for a later iteration.
 - [x] Implement 2D rigid RANSAC with reports and parameters.
 - [x] Create `BEVLocalizer` orchestrator returning `LocalizationResult` with diagnostics.
 - [x] Add CLI commands: `index` build/localize; optional `serve` (serve deferred).
+- [ ] Store REM local features at index build; load at inference to avoid recompute.
 - [ ] Introduce Pydantic-based configs and seed control.
 - [ ] Add logging/profiling/visualization utilities.
 - [ ] Weights management: load/convert pre-trained REIN; document format.
