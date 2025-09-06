@@ -9,12 +9,21 @@ authors = [
 requires-python = ">=3.10"
 dependencies = [
     "pydantic>=2.11.7",
+    "numpy>=1.26",
 ]
 
 [project.optional-dependencies]
 torch = [
     "torch==2.5.1",
     "torchvision==0.20.1",
+]
+faiss = [
+    "faiss-cpu>=1.8.0.post1",
+
+]
+notebook = [
+    "ipykernel>=6.30.1",
+    "ipywidgets>=8.1.7",
 ]
 
 [build-system]
@@ -27,6 +36,7 @@ dev = [
     "ruff>=0.12.11",
     "torch==2.5.1",
     "torchvision==0.20.1",
+    "faiss-cpu>=1.8.0.post1",
 ]
 
 [tool.uv.sources]
