@@ -81,7 +81,7 @@
 - [x] Port REM/NetVLAD/REIN from `mmpr_bevplace`; device-agnostic, typed.
 - [x] Build retrieval index (PCA-512 + FAISS); save/load; add/search APIs.
 - [x] Implement keypoints, descriptor sampling, matching with thresholds.
-- [ ] Implement 2D rigid RANSAC with reports and parameters.
+- [x] Implement 2D rigid RANSAC with reports and parameters.
 - [ ] Create `BEVLocalizer` orchestrator returning `LocalizationResult` with diagnostics.
 - [ ] Add CLI commands: `index` build/localize; optional `serve`.
 - [ ] Introduce Pydantic-based configs and seed control.
