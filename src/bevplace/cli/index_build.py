@@ -4,7 +4,7 @@ import csv
 import json
 import time
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import torch
@@ -13,6 +13,7 @@ from bevplace import REIN
 from bevplace.core.types import BEVParams
 from bevplace.preprocess.bev import bev_density_image_torch
 from bevplace.retrieval import BEVIndex
+from bevplace.cli.common import discover_files, load_bin_kitti, load_pcd_open3d
 
 
 def main() -> None:  # pragma: no cover - thin CLI wrapper
@@ -48,35 +49,6 @@ def main() -> None:  # pragma: no cover - thin CLI wrapper
         g=args.g,
         quiet=args.quiet,
     )
-
-
-def _discover_files(root: Path, exts: Iterable[str]) -> List[Path]:
-    files: List[Path] = []
-    for ext in exts:
-        files.extend(root.rglob(f"*.{ext}"))
-    files = sorted([p for p in files if p.is_file()])
-    return files
-
-
-def _load_bin_kitti(path: Path) -> np.ndarray:
-    data = np.fromfile(str(path), dtype=np.float32)
-    if data.size % 4 == 0:
-        pts = data.reshape(-1, 4)[:, :3]
-    elif data.size % 3 == 0:
-        pts = data.reshape(-1, 3)
-    else:
-        raise ValueError(f"{path} has unexpected BIN size: {data.size}")
-    return pts
-
-
-def _load_pcd_open3d(path: Path) -> np.ndarray:
-    try:
-        import open3d as o3d  # type: ignore
-    except Exception as exc:  # pragma: no cover
-        raise RuntimeError("open3d is required for .pcd reading") from exc
-    pcd = o3d.io.read_point_cloud(str(path))
-    pts = np.asarray(pcd.points, dtype=np.float32)
-    return pts
 
 
 def _parse_poses(path: Path, map_dir: Path) -> Dict[str, Tuple[float, float, float]]:
@@ -135,7 +107,7 @@ def build_index(
     out_path.mkdir(parents=True, exist_ok=True)
 
     exts = [ext] if ext else ["pcd", "bin"]
-    files = _discover_files(map_path, exts)
+    files = discover_files(map_path, exts)
     if not files:
         raise FileNotFoundError(f"No files with extensions {exts} found in {map_path}")
 
@@ -159,9 +131,9 @@ def build_index(
     for idx, p in enumerate(files, start=1):
         # Load point cloud
         if p.suffix.lower() == ".bin":
-            pts = _load_bin_kitti(p)
+            pts = load_bin_kitti(p)
         elif p.suffix.lower() == ".pcd":
-            pts = _load_pcd_open3d(p)
+            pts = load_pcd_open3d(p)
         else:
             continue
         if pts.size == 0:

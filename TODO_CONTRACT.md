@@ -76,6 +76,8 @@
 - `bevplace localize --pcd <path> --db <db_dir>`
 - `bevplace serve --db <db_dir>` (optional; HTTP/gRPC/ROS2 adapters later)
 
+Note: `serve` implementation is deferred for a later iteration.
+
 ### Deliverables — TODOs
 - [x] Implement torch-based BEV density image with CUDA support and fixed D,g.
 - [x] Port REM/NetVLAD/REIN from `mmpr_bevplace`; device-agnostic, typed.
@@ -83,7 +85,7 @@
 - [x] Implement keypoints, descriptor sampling, matching with thresholds.
 - [x] Implement 2D rigid RANSAC with reports and parameters.
 - [x] Create `BEVLocalizer` orchestrator returning `LocalizationResult` with diagnostics.
-- [ ] Add CLI commands: `index` build/localize; optional `serve`.
+- [x] Add CLI commands: `index` build/localize; optional `serve` (serve deferred).
 - [ ] Introduce Pydantic-based configs and seed control.
 - [ ] Add logging/profiling/visualization utilities.
 - [ ] Weights management: load/convert pre-trained REIN; document format.
