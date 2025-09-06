@@ -93,19 +93,22 @@ def test_localize_pose_with_locals(tmp_path: Path):
     out_json = tmp_path / "res.json"
 
     class Args:
-        bin = str(data_dir / "000001.bin")
-        pcd = None
-        db = str(db_dir)
-        map_dir = None  # not needed when locals stored
-        estimate_pose = True
-        topk = 1
-        device = "cpu"
-        D = 40.0
-        g = 0.4
-        out_json = str(out_json)
-        quiet = True
+        pass
 
-    run_localize(Args)
+    args = Args()
+    args.bin = str(data_dir / "000001.bin")
+    args.pcd = None
+    args.db = str(db_dir)
+    args.map_dir = None  # not needed when locals stored
+    args.estimate_pose = True
+    args.topk = 1
+    args.device = "cpu"
+    args.D = 40.0
+    args.g = 0.4
+    args.out_json = str(out_json)
+    args.quiet = True
+
+    run_localize(args)
     assert out_json.exists()
     data = json.loads(out_json.read_text(encoding="utf-8"))
     assert "matched_id" in data and "topk" in data and "distances" in data

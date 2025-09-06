@@ -45,40 +45,35 @@ def run_localize(args: argparse.Namespace) -> None:
     # Optional reference provider
     ref_provider = None
     if args.estimate_pose:
-        if not args.map_dir:
-            raise ValueError("--map-dir is required for --estimate-pose")
-        map_dir = Path(args.map_dir)
-        items = read_items(db_dir)
-
-        def provider_fn(match_id: int):
-            rel = items[match_id]["file"]
-            path = map_dir / rel
-            if path.suffix.lower() == ".pcd":
-                pts_m = load_pcd_open3d(path)
-            else:
-                pts_m = load_bin_kitti(path)
-            pts_m_t = torch.from_numpy(pts_m).to(device)
-            bev_m = bev_density_image_torch(pts_m_t, params)
-            with torch.no_grad():
-                _, rem_map_m, _ = model(bev_m.unsqueeze(0))
-            return bev_m, rem_map_m
-
-        ref_provider = provider_fn
-
-    # If stored locals exist, override provider to load them directly
-    if args.estimate_pose:
-        try:
-            _ = (db_dir / "locals").exists()
-            items = read_items(db_dir)
-
+        # Prefer stored locals (no need for map-dir)
+        locals_dir = db_dir / "locals"
+        if locals_dir.exists():
             def provider_locals(match_id: int):
                 rem = read_locals(db_dir, match_id)  # [C,H,W] float32
-                # Convert to torch tensor shaped [1,C,H,W]
                 return torch.from_numpy(rem).unsqueeze(0).to(device)
 
             ref_provider = provider_locals
-        except Exception:
-            pass
+        else:
+            # Fallback: require map-dir to compute rem_map on the fly
+            if not args.map_dir:
+                raise ValueError("--map-dir is required for --estimate-pose")
+            map_dir = Path(args.map_dir)
+            items = read_items(db_dir)
+
+            def provider_fn(match_id: int):
+                rel = items[match_id]["file"]
+                path = map_dir / rel
+                if path.suffix.lower() == ".pcd":
+                    pts_m = load_pcd_open3d(path)
+                else:
+                    pts_m = load_bin_kitti(path)
+                pts_m_t = torch.from_numpy(pts_m).to(device)
+                bev_m = bev_density_image_torch(pts_m_t, params)
+                with torch.no_grad():
+                    _, rem_map_m, _ = model(bev_m.unsqueeze(0))
+                return bev_m, rem_map_m
+
+            ref_provider = provider_fn
 
     # Localize via orchestrator
     localizer = BEVLocalizer(
