@@ -82,7 +82,7 @@
 - [x] Build retrieval index (PCA-512 + FAISS); save/load; add/search APIs.
 - [x] Implement keypoints, descriptor sampling, matching with thresholds.
 - [x] Implement 2D rigid RANSAC with reports and parameters.
-- [ ] Create `BEVLocalizer` orchestrator returning `LocalizationResult` with diagnostics.
+- [x] Create `BEVLocalizer` orchestrator returning `LocalizationResult` with diagnostics.
 - [ ] Add CLI commands: `index` build/localize; optional `serve`.
 - [ ] Introduce Pydantic-based configs and seed control.
 - [ ] Add logging/profiling/visualization utilities.
