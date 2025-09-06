@@ -80,7 +80,7 @@
 - [x] Implement torch-based BEV density image with CUDA support and fixed D,g.
 - [x] Port REM/NetVLAD/REIN from `mmpr_bevplace`; device-agnostic, typed.
 - [x] Build retrieval index (PCA-512 + FAISS); save/load; add/search APIs.
-- [ ] Implement keypoints, descriptor sampling, matching with thresholds.
+- [x] Implement keypoints, descriptor sampling, matching with thresholds.
 - [ ] Implement 2D rigid RANSAC with reports and parameters.
 - [ ] Create `BEVLocalizer` orchestrator returning `LocalizationResult` with diagnostics.
 - [ ] Add CLI commands: `index` build/localize; optional `serve`.
