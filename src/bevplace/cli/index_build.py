@@ -14,6 +14,7 @@ from bevplace.core.types import BEVParams
 from bevplace.preprocess.bev import bev_density_image_torch
 from bevplace.retrieval import BEVIndex
 from bevplace.cli.common import discover_files, load_bin_kitti, load_pcd_open3d
+from bevplace.models.weights import ensure_default_weights
 
 
 def main() -> None:  # pragma: no cover - thin CLI wrapper
@@ -120,6 +121,8 @@ def build_index(
 
     params = BEVParams(D=D, g=g)
     model = REIN().to(device).eval()
+    # Attempt to load official pretrained weights by default
+    ensure_default_weights(model, quiet=quiet)
 
     descriptors: List[np.ndarray] = []
     items: List[Tuple[str, Optional[Tuple[float, float, float]]]] = []

@@ -19,6 +19,7 @@ from bevplace.cli.common import (
     read_bev_params,
     read_locals,
 )
+from bevplace.models.weights import ensure_default_weights
 
 
 def run_localize(args: argparse.Namespace) -> None:
@@ -41,6 +42,7 @@ def run_localize(args: argparse.Namespace) -> None:
 
     # Build model
     model = REIN().to(device).eval()
+    ensure_default_weights(model, quiet=args.quiet)
 
     # Optional reference provider
     ref_provider = None

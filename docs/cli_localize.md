@@ -88,6 +88,7 @@ Notes:
 - If `--estimate-pose` is not set, the command performs retrieval only.
 - `--D` and `--g` should match the parameters used to build the index to avoid descriptor distribution shift.
 - Progress: a small progress message is printed; use `--quiet` to suppress.
+- The tool attempts to load official BEVPlace2 weights by default for consistency with the published model; if unavailable, it proceeds with random init (results may vary).
 
 ## Examples
 

@@ -133,6 +133,7 @@ IDs are stable and correspond to the sorted order of discovered files.
 ## Behavior and notes
 
 - The command extracts BEV images, runs the REIN network to obtain global descriptors, then builds the index.
+- By default, the tool attempts to load the official BEVPlace2 pretrained weights for REIN. If download/load fails, it falls back to random init.
 - If PCA is enabled, PCA is fit on all descriptors (or a future `--pca-sample N` when available), and descriptors are projected before FAISS indexing.
 - Unreadable/empty files are skipped with a warning; the build continues.
 - Deterministic execution: discovery order is sorted; seeds fixed for any sampling.
