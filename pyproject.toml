@@ -1,7 +1,8 @@
 [project]
 name = "bevplace"
-version = "0.1.0"
-description = "Add your description here"
+version = "0.2.0"
+description = "BEVPlace++ inference-ready Python package for LiDAR-based place recognition and 3-DoF localization."
+license = { file = "LICENSE" }
 readme = "README.md"
 authors = [
     { name = "Alexander Melekhin", email = "amelekhin96@gmail.com" }
