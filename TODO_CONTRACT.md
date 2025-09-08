@@ -100,7 +100,7 @@ Planned flags:
 - [x] Store REM local features at index build; load at inference to avoid recompute.
 - [ ] Introduce Pydantic-based configs and seed control.
 - [ ] Add logging/profiling/visualization utilities.
-- [ ] Weights management: load/convert pre-trained REIN; document format.
+- [x] Weights management: load pre-trained REIN (official BEVPlace2); document format.
 - [ ] QA: invariance tests, pose composition checks, performance smoke tests.
 - [ ] Packaging with `uv` and `ruff`; CI quality gate.
 - [ ] Optional adapters: ROS2/gRPC for online serving.
