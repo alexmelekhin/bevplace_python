@@ -38,12 +38,16 @@ class BEVLocalizer:
         bev_params: BEVParams,
         device: str | torch.device = "cpu",
         reference_provider: Optional[ReferenceProvider] = None,
+        pose_thresh_m: float = 0.5,
+        pose_kps: str = "fast",
     ) -> None:
         self.model = model
         self.index = index
         self.params = bev_params
         self.device = torch.device(device)
         self.reference_provider = reference_provider
+        self.pose_thresh_m = float(pose_thresh_m)
+        self.pose_kps = pose_kps
 
     @torch.no_grad()
     def localize(self, point_cloud: np.ndarray | torch.Tensor, k: int = 1) -> LocalizationResult:
@@ -84,12 +88,29 @@ class BEVLocalizer:
                 _, rem_map_m = ret
             else:
                 rem_map_m = ret
-            # Simple keypoint grid for demo matching
+            # Keypoints selection: FAST if requested and available, else uniform grid
             H, W = bev_img.shape[-2], bev_img.shape[-1]
-            step = max(4, int(round(self.params.g / 0.2)))
-            rows = np.arange(0, H, step)
-            cols = np.arange(0, W, step)
-            kps_rc = np.array([(r, c) for r in rows for c in cols], dtype=np.int64)
+            if self.pose_kps.lower() == "fast":
+                try:
+                    import cv2  # type: ignore
+
+                    img_u8 = (bev_img[0].detach().cpu().numpy() * 256.0).astype(np.uint8)
+                    img_u8 = np.repeat(img_u8[:, :, None], 3, axis=2)
+                    fast = cv2.FastFeatureDetector_create()
+                    kps_cv = fast.detect(img_u8, None)
+                    if len(kps_cv) == 0:
+                        raise RuntimeError("no FAST keypoints; fallback to grid")
+                    kps_rc = np.array([[int(kp.pt[1]), int(kp.pt[0])] for kp in kps_cv], dtype=np.int64)
+                except Exception:
+                    step = max(4, int(round(self.params.g / 0.2)))
+                    rows = np.arange(0, H, step)
+                    cols = np.arange(0, W, step)
+                    kps_rc = np.array([(r, c) for r in rows for c in cols], dtype=np.int64)
+            else:
+                step = max(4, int(round(self.params.g / 0.2)))
+                rows = np.arange(0, H, step)
+                cols = np.arange(0, W, step)
+                kps_rc = np.array([(r, c) for r in rows for c in cols], dtype=np.int64)
 
             desc_q = sample_descriptors(rem_map_q, kps_rc)
             desc_m = sample_descriptors(rem_map_m, kps_rc)
@@ -98,8 +119,10 @@ class BEVLocalizer:
             if num_matches >= 2:
                 pts_q = np.array([[r, c] for (r, c) in kps_rc[[m[0] for m in matches]]], dtype=np.float32)
                 pts_m = np.array([[r, c] for (r, c) in kps_rc[[m[1] for m in matches]]], dtype=np.float32)
+                # Convert threshold in meters to pixels using grid resolution g
+                pixel_thresh = float(self.pose_thresh_m / max(self.params.g, 1e-6))
                 T_rel, report = estimate_rigid_transform_ransac(
-                    pts_q, pts_m, pixel_thresh=2.0, max_iters=2000, confidence=0.99
+                    pts_q, pts_m, pixel_thresh=pixel_thresh, max_iters=1000, confidence=0.99
                 )
                 inliers_ratio = report["inliers"] / max(num_matches, 1)
             timings["pose_ms"] = (time.perf_counter() - t3) * 1000

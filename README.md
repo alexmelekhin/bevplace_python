@@ -2,11 +2,31 @@
 
 ## Installation
 
-todo
+Requires Python 3.10+. Install with uv:
+
+```bash
+uv pip install -e .
+```
 
 ## Usage
 
-todo
+Two entrypoints:
+
+- Build index (PCA off by default):
+```bash
+python -m bevplace.cli index build --map-dir /path/to/pcds_or_bins --out /path/to/index \
+  --D 40.0 --g 0.4 --store-locals
+```
+
+- Localize a single query:
+```bash
+python -m bevplace.cli localize --db /path/to/index --bin /path/to/query.bin \
+  --estimate-pose --pose-thresh-m 0.5 --pose-kps fast
+```
+
+Notes:
+- BEV images are computed on-the-fly with upstream-compatible settings (voxel ds=g, per-cell cap=10, per-image max normalization).
+- Weights are auto-downloaded from the official repo; if not available, you can pass `--weights PATH` during index build to use a local checkpoint.
 
 ## Acknowledgments
 

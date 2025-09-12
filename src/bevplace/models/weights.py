@@ -49,7 +49,7 @@ def load_state_dict_into_rein(model: REIN, ckpt_path: Path, map_location: Option
     new_state = {}
     for k, v in state.items():
         if k.startswith("module."):
-            new_state[k[len("module."):]] = v
+            new_state[k[len("module.") :]] = v
         else:
             new_state[k] = v
 
@@ -58,7 +58,7 @@ def load_state_dict_into_rein(model: REIN, ckpt_path: Path, map_location: Option
     # It's okay to ignore missing/unexpected; caller can decide to warn/log if needed
 
 
-def ensure_default_weights(model: REIN, quiet: bool = False) -> None:
+def ensure_default_weights(model: REIN, quiet: bool = False) -> bool:
     """Try to download and load the official BEVPlace2 checkpoint into model.
 
     Falls back silently if download/load fails.
@@ -68,8 +68,8 @@ def ensure_default_weights(model: REIN, quiet: bool = False) -> None:
         load_state_dict_into_rein(model, path)
         if not quiet:
             print("Loaded official BEVPlace2 weights", flush=True)
+        return True
     except Exception as _:
         if not quiet:
             print("Warning: failed to load official weights; proceeding without pretrained.", flush=True)
-
-
+        return False

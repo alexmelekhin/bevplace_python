@@ -25,12 +25,16 @@ def main() -> None:  # pragma: no cover - thin CLI wrapper
     parser.add_argument("--out", required=True, help="Output directory for index")
     parser.add_argument("--ext", choices=["pcd", "bin"], default=None, help="Restrict to a single extension")
     parser.add_argument("--poses", default=None, help="Optional poses file (csv/json/jsonl)")
-    parser.add_argument("--pca-dim", type=int, default=512, help="PCA target dimension; 0 disables PCA")
+    parser.add_argument("--pca-dim", type=int, default=0, help="PCA target dimension; 0 disables PCA")
     parser.add_argument("--device", default=None, help="cpu or cuda (default: auto)")
     parser.add_argument("--D", type=float, default=40.0, help="BEV half-size in meters")
     parser.add_argument("--g", type=float, default=0.4, help="BEV grid size in meters per pixel")
     parser.add_argument("-q", "--quiet", action="store_true", help="Suppress progress output")
     parser.add_argument("--store-locals", action="store_true", help="Store REM local features in index dir")
+    parser.add_argument("--weights", default=None, help="Path to checkpoint to load (overrides default)")
+    parser.add_argument(
+        "--no-init-from-data", action="store_true", help="Do not init NetVLAD from data if weights missing"
+    )
 
     args = parser.parse_args()
 
@@ -51,6 +55,8 @@ def main() -> None:  # pragma: no cover - thin CLI wrapper
         g=args.g,
         quiet=args.quiet,
         store_locals=args.store_locals,
+        weights_path=args.weights,
+        no_init_from_data=args.no_init_from_data,
     )
 
 
@@ -104,6 +110,8 @@ def build_index(
     g: float = 0.4,
     quiet: bool = False,
     store_locals: bool = False,
+    weights_path: Optional[str] = None,
+    no_init_from_data: bool = False,
 ) -> None:
     t0 = time.perf_counter()
     map_path = Path(map_dir)
@@ -121,8 +129,24 @@ def build_index(
 
     params = BEVParams(D=D, g=g)
     model = REIN().to(device).eval()
-    # Attempt to load official pretrained weights by default
-    ensure_default_weights(model, quiet=quiet)
+    # Attempt to load weights (explicit path or default); fallback to data-init if allowed
+    loaded = False
+    if weights_path:
+        try:
+            from bevplace.models.weights import load_state_dict_into_rein
+            from pathlib import Path as _P
+
+            load_state_dict_into_rein(model, _P(weights_path))
+            loaded = True
+            if not quiet:
+                print("Loaded weights from --weights", flush=True)
+        except Exception as _:
+            if not quiet:
+                print("Warning: failed to load --weights; will try default or data-init", flush=True)
+    if not loaded:
+        loaded = ensure_default_weights(model, quiet=quiet)
+    if not loaded and no_init_from_data and not quiet:
+        print("Note: --no-init-from-data set; using random NetVLAD (results may be poor)", flush=True)
 
     descriptors: List[np.ndarray] = []
     items: List[Tuple[str, Optional[Tuple[float, float, float]]]] = []
@@ -179,9 +203,9 @@ def build_index(
 
     X = np.vstack(descriptors)
     index = BEVIndex(pca_dim=pca_dim)
+    if (pca_dim is not None and pca_dim > 0) and not quiet:
+        print("Fitting PCA...", flush=True)
     if pca_dim is not None and pca_dim > 0:
-        if not quiet:
-            print("Fitting PCA...", flush=True)
         index.fit_pca(X)
     index.add(X, poses=None)
 

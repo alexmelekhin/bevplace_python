@@ -27,7 +27,7 @@ class BEVIndex:
       - save(dir) / load(dir)
     """
 
-    def __init__(self, pca_dim: Optional[int] = 512) -> None:
+    def __init__(self, pca_dim: Optional[int] = None) -> None:
         self.pca_dim = pca_dim
         self._pca_mean: Optional[np.ndarray] = None
         self._pca_components: Optional[np.ndarray] = None  # [pca_dim, d]

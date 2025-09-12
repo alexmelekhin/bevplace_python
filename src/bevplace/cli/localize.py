@@ -42,7 +42,9 @@ def run_localize(args: argparse.Namespace) -> None:
 
     # Build model
     model = REIN().to(device).eval()
-    ensure_default_weights(model, quiet=args.quiet)
+    ok = ensure_default_weights(model, quiet=args.quiet)
+    if not ok and not args.quiet:
+        print("Warning: proceeding without pretrained weights; results may be poor.", flush=True)
 
     # Optional reference provider
     ref_provider = None
@@ -50,6 +52,7 @@ def run_localize(args: argparse.Namespace) -> None:
         # Prefer stored locals (no need for map-dir)
         locals_dir = db_dir / "locals"
         if locals_dir.exists():
+
             def provider_locals(match_id: int):
                 rem = read_locals(db_dir, match_id)  # [C,H,W] float32
                 return torch.from_numpy(rem).unsqueeze(0).to(device)
@@ -79,7 +82,13 @@ def run_localize(args: argparse.Namespace) -> None:
 
     # Localize via orchestrator
     localizer = BEVLocalizer(
-        model=model, index=index, bev_params=params, device=device, reference_provider=ref_provider
+        model=model,
+        index=index,
+        bev_params=params,
+        device=device,
+        reference_provider=ref_provider,
+        pose_thresh_m=float(getattr(args, "pose_thresh_m", 0.5)),
+        pose_kps=str(getattr(args, "pose_kps", "grid")),
     )
     pts_t = torch.from_numpy(pts_np).to(device)
     if not args.quiet:

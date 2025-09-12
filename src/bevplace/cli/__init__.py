@@ -15,11 +15,15 @@ def _add_index_subparser(subparsers: argparse._SubParsersAction) -> None:
     p_build.add_argument("--out", required=True, help="Output directory for index")
     p_build.add_argument("--ext", choices=["pcd", "bin"], default=None, help="Restrict to a single extension")
     p_build.add_argument("--poses", default=None, help="Optional poses file (csv/json/jsonl)")
-    p_build.add_argument("--pca-dim", type=int, default=512, help="PCA target dimension; 0 disables PCA")
+    p_build.add_argument("--pca-dim", type=int, default=0, help="PCA target dimension; 0 disables PCA")
     p_build.add_argument("--device", default=None, help="cpu or cuda (default: auto)")
     p_build.add_argument("--D", type=float, default=40.0, help="BEV half-size in meters")
     p_build.add_argument("--g", type=float, default=0.4, help="BEV grid size in meters per pixel")
     p_build.add_argument("--store-locals", action="store_true", help="Store REM local features in index dir")
+    p_build.add_argument("--weights", default=None, help="Path to checkpoint to load (overrides default)")
+    p_build.add_argument(
+        "--no-init-from-data", action="store_true", help="Do not init NetVLAD from data if weights missing"
+    )
 
     def run_build(args: argparse.Namespace) -> None:
         import torch
@@ -54,6 +58,10 @@ def _add_index_subparser(subparsers: argparse._SubParsersAction) -> None:
     p_local.add_argument("--g", type=float, default=0.4, help="BEV grid size in meters per pixel")
     p_local.add_argument("--out-json", default=None, help="Write result JSON to this path")
     p_local.add_argument("-q", "--quiet", action="store_true", help="Suppress progress output")
+    p_local.add_argument("--pose-thresh-m", type=float, default=0.5, help="RANSAC inlier threshold in meters")
+    p_local.add_argument(
+        "--pose-kps", choices=["grid", "fast"], default="fast", help="Keypoints strategy for pose"
+    )
 
     p_local.set_defaults(func=run_localize)
 
