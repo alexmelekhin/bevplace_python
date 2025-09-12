@@ -29,11 +29,13 @@ bevplace index build \
   --out <DB_DIR> \
   [--ext pcd|bin] \
   [--poses <POSES_FILE>] \
-  [--pca-dim 512] \
+  [--pca-dim 0] \
   [--device cpu|cuda] \
   [--D 40.0] \
   [--g 0.4] \
   [--store-locals] \
+  [--weights <CKPT>] \
+  [--no-init-from-data] \
   [-q|--quiet]
 ```
 
@@ -42,9 +44,12 @@ bevplace index build \
 - **--ext**: File extension type. Auto-detected if omitted (pcd and bin files discovered).
 - **--poses**: Optional poses file (CSV, JSONL, or JSON). See “Pose file formats”.
 - **--pca-dim**: PCA target dimension (set to 0 or omit to disable). Default: 512.
+- **--pca-dim**: PCA target dimension (set to 0 or omit to disable). Default: 0 (disabled).
 - **--device**: Device for feature extraction. Default: auto (cuda if available).
 - **--D**, **--g**: BEV generation parameters (half-size in meters, grid size in meters).
 - **--store-locals**: Also store per-item REM local feature maps (float32) to speed up pose estimation later.
+- **--weights**: Load model weights from a checkpoint path (overrides default official weights URL).
+- **--no-init-from-data**: If weights are unavailable, do not attempt any data-based initialization; proceed with random NetVLAD.
 - **-q**, **--quiet**: Suppress progress output.
 
 ## Inputs
@@ -142,7 +147,7 @@ IDs are stable and correspond to the sorted order of discovered files.
 - Performance tips:
   - Set `--device cuda` to utilize GPU for feature extraction.
   - Adjust `--pca-dim` to balance recall and search speed (512 is a good default).
-  - `--D` and `--g` affect BEV size (and throughput). Paper defaults: D=40.0, g=0.4 → 200×200.
+  - `--D` and `--g` affect BEV size (and throughput). With upstream-compatible indexing: D=40.0, g=0.4 → 201×201.
 
 ## Downstream usage
 

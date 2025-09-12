@@ -33,6 +33,8 @@ bevplace localize \
   [--device cpu|cuda] \
   [--D 40.0] \
   [--g 0.4] \
+  [--pose-thresh-m 0.5] \
+  [--pose-kps grid|fast] \
   [--out-json result.json] \
   [-q|--quiet]
 ```
@@ -49,6 +51,8 @@ bevplace localize \
 - **--db DIR**: Path to the index directory produced by `bevplace index build`.
 - **--map-dir DIR**: Root directory containing the map point clouds referenced in the index `items.jsonl` (used for pose estimation).
 - **--estimate-pose**: If set, runs BEV keypoint matching + RANSAC to estimate a 2D rigid transform in BEV pixels, returned as SE(2). Requires `--map-dir`.
+- **--pose-thresh-m**: RANSAC inlier threshold in meters (converted to pixels via `g`). Default: 0.5.
+- **--pose-kps**: Keypoint strategy for pose estimation (`fast` or `grid`). Default: `fast`.
 - **--topk K**: Retrieve top-K candidates (default: 5). The CLI prints all K; pose is computed from top-1.
 - **--device**: Device for inference (default: auto).
 - **--D**, **--g**: BEV generation parameters. If the DB contains `bev_params.json`, those values are used; otherwise these flags are used. They should match the parameters used for indexing for best results.
