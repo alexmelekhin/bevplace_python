@@ -2,11 +2,27 @@
 
 ## Installation
 
-Requires Python 3.10+. Install with uv:
+Requires Python 3.10+.
+
+Install from GitHub (core):
 
 ```bash
-uv pip install -e .
+pip install "bevplace @ git+https://github.com/alexmelekhin/bevplace_python.git"
 ```
+
+Install with extras (recommended for runtime):
+
+```bash
+pip install "bevplace[torch,faiss,open3d] @ git+https://github.com/alexmelekhin/bevplace_python.git"
+```
+
+Notes:
+- These extras correspond to optional dependencies defined in `pyproject.toml` (`[project.optional-dependencies]`).
+- Depending on your platform/GPU, you may want a specific PyTorch build (CPU or CUDA). Example (CUDA 12.1):
+  ```bash
+  pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
+  ```
+- If you prefer manual installs, you can install `torch`, `faiss-cpu` (or `faiss-gpu`), and `open3d` yourself before installing `bevplace`.
 
 ## Usage
 
