@@ -5,6 +5,7 @@ import json
 import time
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
+import re
 
 import numpy as np
 import torch
@@ -24,7 +25,11 @@ def main() -> None:  # pragma: no cover - thin CLI wrapper
     parser.add_argument("--map-dir", required=True, help="Directory with .pcd/.bin files")
     parser.add_argument("--out", required=True, help="Output directory for index")
     parser.add_argument("--ext", choices=["pcd", "bin"], default=None, help="Restrict to a single extension")
-    parser.add_argument("--poses", default=None, help="Optional poses file (csv/json/jsonl)")
+    parser.add_argument(
+        "--poses",
+        default=None,
+        help="Optional poses file (csv/json/jsonl/tum). For TUM, poses are auto-synced by nearest timestamp.",
+    )
     parser.add_argument("--pca-dim", type=int, default=0, help="PCA target dimension; 0 disables PCA")
     parser.add_argument("--device", default=None, help="cpu or cuda (default: auto)")
     parser.add_argument("--D", type=float, default=40.0, help="BEV half-size in meters")
@@ -99,6 +104,112 @@ def _parse_poses(path: Path, map_dir: Path) -> Dict[str, Tuple[float, float, flo
     return poses
 
 
+def _parse_tum_poses(path: Path) -> Tuple[np.ndarray, np.ndarray]:
+    """Parse a TUM poses file.
+
+    Supports two common formats per line (whitespace-separated):
+    - t x y z qx qy qz qw (8 columns, quaternion)
+    - t x y z roll pitch yaw (7 columns, radians)
+
+    Returns:
+        A tuple (times, xy_yaw) where times is a float numpy array [N], and
+        xy_yaw is a float numpy array [N,3] with columns [x, y, yaw].
+    """
+    times: List[float] = []
+    xy_yaw_list: List[Tuple[float, float, float]] = []
+
+    if not path.exists():
+        return np.asarray(times, dtype=float), np.asarray(xy_yaw_list, dtype=float)
+
+    with path.open("r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            parts = line.split()
+            try:
+                if len(parts) >= 8:
+                    t, x, y, _z, qx, qy, qz, qw = (float(parts[0]), float(parts[1]), float(parts[2]), float(parts[3]),
+                                                    float(parts[4]), float(parts[5]), float(parts[6]), float(parts[7]))
+                    # Yaw from quaternion (Z rotation)
+                    # Reference: yaw = atan2(2*(w*z + x*y), 1 - 2*(y*y + z*z))
+                    num = 2.0 * (qw * qz + qx * qy)
+                    den = 1.0 - 2.0 * (qy * qy + qz * qz)
+                    yaw = float(np.arctan2(num, den))
+                elif len(parts) >= 7:
+                    t, x, y, _z, _roll, _pitch, yaw = (float(parts[0]), float(parts[1]), float(parts[2]), float(parts[3]),
+                                                       float(parts[4]), float(parts[5]), float(parts[6]))
+                else:
+                    continue
+            except ValueError:
+                continue
+
+            times.append(t)
+            xy_yaw_list.append((x, y, yaw))
+
+    if not times:
+        return np.asarray([], dtype=float), np.asarray([], dtype=float).reshape(0, 3)
+
+    times_arr = np.asarray(times, dtype=float)
+    xy_yaw_arr = np.asarray(xy_yaw_list, dtype=float)
+
+    # Ensure sorted by time
+    order = np.argsort(times_arr)
+    return times_arr[order], xy_yaw_arr[order]
+
+
+def _extract_timestamp_from_filename(p: Path) -> Optional[float]:
+    """Extract a floating-point timestamp from a file name.
+
+    Tries to parse the stem directly; if that fails, searches for the first
+    numeric substring that looks like a float or integer.
+
+    Args:
+        p: Path to the file.
+
+    Returns:
+        Parsed timestamp as float if found, otherwise None.
+    """
+    stem = p.stem
+    try:
+        return float(stem)
+    except ValueError:
+        pass
+
+    # Find first numeric token (float or int)
+    match = re.search(r"[-+]?\d*\.\d+|\d+", stem)
+    if match:
+        try:
+            return float(match.group(0))
+        except ValueError:
+            return None
+    return None
+
+
+def _nearest_index(sorted_times: np.ndarray, t: float) -> int:
+    """Find index of nearest time in a sorted 1D array.
+
+    Args:
+        sorted_times: 1D numpy array of monotonically increasing times.
+        t: Query timestamp.
+
+    Returns:
+        Index of the nearest time value.
+    """
+    if sorted_times.size == 0:
+        return 0
+    idx = int(np.searchsorted(sorted_times, t))
+    if idx == 0:
+        return 0
+    if idx >= sorted_times.size:
+        return int(sorted_times.size - 1)
+    before = idx - 1
+    after = idx
+    if abs(sorted_times[after] - t) < abs(sorted_times[before] - t):
+        return after
+    return before
+
+
 def build_index(
     map_dir: str | Path,
     out_dir: str | Path,
@@ -124,8 +235,16 @@ def build_index(
         raise FileNotFoundError(f"No files with extensions {exts} found in {map_path}")
 
     poses: Dict[str, Tuple[float, float, float]] = {}
+    tum_times: Optional[np.ndarray] = None
+    tum_xyyaw: Optional[np.ndarray] = None
     if poses_path:
-        poses = _parse_poses(Path(poses_path), map_path)
+        _pp = Path(poses_path)
+        if _pp.suffix.lower() in {".tum"}:
+            tum_times, tum_xyyaw = _parse_tum_poses(_pp)
+            if not quiet and (tum_times is None or tum_times.size == 0):
+                print("Warning: TUM poses file parsed but contains no entries", flush=True)
+        else:
+            poses = _parse_poses(_pp, map_path)
 
     params = BEVParams(D=D, g=g)
     model = REIN().to(device).eval()
@@ -187,6 +306,12 @@ def build_index(
 
             rel = str(p.relative_to(map_path))
             pose = poses.get(rel)
+            if pose is None and tum_times is not None and tum_xyyaw is not None and tum_times.size > 0:
+                ts = _extract_timestamp_from_filename(p)
+                if ts is not None:
+                    j = _nearest_index(tum_times, float(ts))
+                    x, y, yaw = tum_xyyaw[j]
+                    pose = (float(x), float(y), float(yaw))
             items.append((rel, pose))
 
             if not quiet:
